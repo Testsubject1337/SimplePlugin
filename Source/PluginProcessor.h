@@ -103,8 +103,8 @@ private:
 
     // =================== DSP UNITS ===================
 
-    //EQ
-    
+    // =======EQ=======
+    // Enum to represent the positions of different processing stages in the chain
     enum ChainPositions
     {
         LowCut,
@@ -113,16 +113,22 @@ private:
         Reverb
     };
     
+    // Define Filter and ProcessorChain types for easier use
     using Filter = juce::dsp::IIR::Filter<float>;
     using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter>;
     using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, CutFilter>;
     using Coefficients = Filter::CoefficientsPtr;
+
+    // Create left and right processing chains
     MonoChain leftChain, rightChain;
 
+    // Function to update the peak filter with new chain settings
     void updatePeakFilter(const ChainSettings& chainSettings);
     
+    // Function to update filter coefficients
     static void updateCoefficients(Coefficients& old, const Coefficients& replacements);
 
+    // Template function to update a specific filter stage in the chain
     template<int Index, typename ChainType, typename CoefficientType>
     void update(ChainType& chain, const CoefficientType& coefficients)
     {
@@ -130,88 +136,43 @@ private:
         chain.template setBypassed<Index>(false);
     }
 
-
+    // Template function to update the low-cut filter stages based on the slope
     template<typename ChainType, typename CoefficientType>
     inline void updateCutFilter(ChainType& LowCut, const CoefficientType& cutCoefficients, const Slope& lowCutSlope)
     {
+        // Initially bypass all filter stages
         LowCut.template setBypassed<0>(true);
         LowCut.template setBypassed<1>(true);
         LowCut.template setBypassed<2>(true);
         LowCut.template setBypassed<3>(true);
 
+        // Update the filter stages based on the low-cut slope
         switch (lowCutSlope)
         {
-        case Slope_48:
-        {
-            update<3>(LowCut, cutCoefficients);
-        }
-
-        case Slope_36:
-        {
-            update<2>(LowCut, cutCoefficients);
-        }
-
-        case Slope_24:
-        {
-            update<1>(LowCut, cutCoefficients);
-        }
-
-        case Slope_12:
-        {
-            update<0>(LowCut, cutCoefficients);
-        }
-
-
-        /* case Slope_12:
-         {
-             *LowCut.get<0>().coefficients = *cutCoefficients[0];
-             LowCut.template setBypassed<0>(false);
-             break;
-         }
-         case Slope_24:
-         {
-             *LowCut.template get<0>().coefficients = *cutCoefficients[0];
-             LowCut.template setBypassed<0>(false);
-             *LowCut.template get<1>().coefficients = *cutCoefficients[0];
-             LowCut.template setBypassed<1>(false);
-             break;
-         }
-
-         case Slope_36:
-         {
-             *LowCut.template get<0>().coefficients = *cutCoefficients[0];
-             LowCut.template setBypassed<0>(false);
-             *LowCut.template get<1>().coefficients = *cutCoefficients[0];
-             LowCut.template setBypassed<1>(false);
-             *LowCut.template get<2>().coefficients = *cutCoefficients[0];
-             LowCut.template setBypassed<2>(false);
-             break;
-         }
-
-         case Slope_48:
-         {
-             *LowCut.template get<0>().coefficients = *cutCoefficients[0];
-             LowCut.template setBypassed<0>(false);
-             *LowCut.template get<1>().coefficients = *cutCoefficients[0];
-             LowCut.template setBypassed<1>(false);
-             *LowCut.template get<2>().coefficients = *cutCoefficients[0];
-             LowCut.template setBypassed<2>(false);
-             *LowCut.template get<3>().coefficients = *cutCoefficients[0];
-             LowCut.template setBypassed<3>(false);
-             break;
-         }*/
+            case Slope_48:
+            {
+                update<3>(LowCut, cutCoefficients);
+            }
+            case Slope_36:
+            {
+                update<2>(LowCut, cutCoefficients);
+            }
+            case Slope_24:
+            {
+                update<1>(LowCut, cutCoefficients);
+            }
+            case Slope_12:
+            {
+                update<0>(LowCut, cutCoefficients);
+            }
         }
     }
 
 
-    // Reverb
+    //=======Reverb=======
     juce::dsp::Reverb reverb;
-    
-    void updateReverbParameters();
 
-
-
-
+    void updateReverbParameters(const ChainSettings& chainSettings);
 
 
     //==============================================================================

@@ -106,20 +106,37 @@ void SimplePluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
     spec.numChannels = 2; // Assuming stereo input/output
     reverb.prepare(spec);
 
+    
+
 
     auto chainSettings = getChainSettings(apvts);
 
+    
+
     updatePeakFilter(chainSettings);
 
-    auto cutCoefficients = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.lowCutFreq, sampleRate, 2 * (chainSettings.lowCutSlope + 1));
+    auto lowCutCoefficients = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.lowCutFreq, sampleRate, 2 * (chainSettings.lowCutSlope + 1));
     
-    //Update Left
+    //Left Lowcut
     auto& leftLowCut = leftChain.get<ChainPositions::LowCut>();
-    updateCutFilter(leftLowCut, cutCoefficients, chainSettings.lowCutSlope);
+    updateCutFilter(leftLowCut, lowCutCoefficients, chainSettings.lowCutSlope);
 
-    //Update Right
+    //Right Lowcut
     auto& rightLowCut = rightChain.get<ChainPositions::LowCut>();
-    updateCutFilter(rightLowCut, cutCoefficients, chainSettings.lowCutSlope);
+    updateCutFilter(rightLowCut, lowCutCoefficients, chainSettings.lowCutSlope);
+
+    auto highCutCoefficients = juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod(chainSettings.highCutFreq, sampleRate, 2 * (chainSettings.highCutSlope + 1));
+
+    //Left Highcut
+    auto& leftHighCut = leftChain.get<ChainPositions::LowCut>();
+    updateCutFilter(leftHighCut, highCutCoefficients, chainSettings.lowCutSlope);
+
+    //Right Highcut
+    auto& rightHighCut = rightChain.get<ChainPositions::LowCut>();
+    updateCutFilter(rightHighCut, highCutCoefficients, chainSettings.lowCutSlope);
+
+
+    updateReverbParameters(chainSettings);
 
 }
 
@@ -170,11 +187,15 @@ void SimplePluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    //Updates
+
+    // =====================
+    //Peak
     auto chainSettings = getChainSettings(apvts);
 
     updatePeakFilter(chainSettings);
 
+
+    //Lowcut
     auto cutCoefficients = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.lowCutFreq, getSampleRate(), 2 * (chainSettings.lowCutSlope + 1));
 
     auto& leftLowCut = leftChain.get<ChainPositions::LowCut>();
@@ -182,6 +203,19 @@ void SimplePluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
     auto& rightLowCut = rightChain.get<ChainPositions::LowCut>();
     updateCutFilter(rightLowCut, cutCoefficients, chainSettings.lowCutSlope);
+
+
+    //Highcut
+    auto highCutCoefficients = juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod(chainSettings.highCutFreq, getSampleRate(), 2 * (chainSettings.highCutSlope + 1));
+
+    auto& leftHighCut = leftChain.get<ChainPositions::HighCut>();
+    updateCutFilter(leftHighCut, highCutCoefficients, chainSettings.highCutSlope);
+
+    auto& rightHighCut = rightChain.get<ChainPositions::HighCut>();
+    updateCutFilter(rightHighCut, highCutCoefficients, chainSettings.highCutSlope);
+
+    // =====================
+
 
 
     juce::dsp::AudioBlock<float> block(buffer);
@@ -194,7 +228,14 @@ void SimplePluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 
     leftChain.process(leftContext);
     rightChain.process(rightContext);
-    
+
+    // Update reverb parameters
+    updateReverbParameters(chainSettings);
+
+    // Apply reverb effect
+    juce::dsp::AudioBlock<float> reverbBlock(buffer);
+    juce::dsp::ProcessContextReplacing<float> reverbContext(reverbBlock);
+    reverb.process(reverbContext);
 
 }
 
@@ -291,12 +332,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout SimplePluginAudioProcessor::
     parameterLayout.add(std::make_unique<juce::AudioParameterFloat>(
         "Damping", "Damping", 0.0f, 1.0f, 0.5f));
 
-    // Pre-delay parameter
-    parameterLayout.add(std::make_unique<juce::AudioParameterFloat>(
-        "PreDelay", "Pre-Delay", 0.0f, 100.0f, 0.0f));
 
-    parameterLayout.add(std::make_unique<juce::AudioParameterFloat>(
-        "Low", "Low", -24.0f, 24.0f, 0.0f));
 
 
 
@@ -324,8 +360,6 @@ ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts)
 
     settings.roomSize = apvts.getRawParameterValue("RoomSize")->load();
     settings.damping = apvts.getRawParameterValue("Damping")->load();
-    settings.preDelay = apvts.getRawParameterValue("PreDelay")->load();
-    settings.low = apvts.getRawParameterValue("Low")->load();
     settings.mix = apvts.getRawParameterValue("Mix")->load();
 
     return settings;
@@ -348,17 +382,17 @@ void SimplePluginAudioProcessor::updateCoefficients(Coefficients& old, const Coe
     *old = *replacements;
 }
 
-void SimplePluginAudioProcessor::updateReverbParameters()
+void SimplePluginAudioProcessor::updateReverbParameters(const ChainSettings& chainSettings)
 {
-    juce::dsp::Reverb::Parameters params;
-    params.roomSize = *apvts.getRawParameterValue("roomSize");
-    params.damping = *apvts.getRawParameterValue("damping");
-    params.wetLevel = *apvts.getRawParameterValue("wetLevel");
-    params.dryLevel = *apvts.getRawParameterValue("dryLevel");
-    params.width = 1.0f; // You can adjust the width parameter as needed
-    params.freezeMode = 0.0f; // You can set this to 1.0f to enable freeze mode
+    juce::dsp::Reverb::Parameters reverbParameters;
+    reverbParameters.roomSize = chainSettings.roomSize;
+    reverbParameters.damping = chainSettings.damping;
+    reverbParameters.wetLevel = chainSettings.mix;
+    reverbParameters.dryLevel = 1.0f - reverbParameters.wetLevel;
+    reverbParameters.freezeMode = 0.0f;
+    reverbParameters.width = 1.0f;
 
-    reverb.setParameters(params);
+    reverb.setParameters(reverbParameters);
 }
 
 //==============================================================================
