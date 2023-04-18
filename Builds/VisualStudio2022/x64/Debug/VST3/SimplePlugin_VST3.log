@@ -1,0 +1,3 @@
+﻿  include_juce_audio_plugin_client_VST3.cpp
+  SimplePlugin_VST3.vcxproj -> D:\Projekte\GITHUB\SimplePlugin\SimplePlugin\Builds\VisualStudio2022\x64\Debug\VST3\SimplePlugin.dll
+          1 Datei(en) kopiert.

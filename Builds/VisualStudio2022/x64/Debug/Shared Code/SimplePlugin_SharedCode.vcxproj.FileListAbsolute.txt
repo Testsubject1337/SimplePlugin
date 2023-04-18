@@ -1,0 +1,1 @@
+D:\Projekte\GITHUB\SimplePlugin\SimplePlugin\Builds\VisualStudio2022\x64\Debug\Shared Code\SimplePlugin.lib

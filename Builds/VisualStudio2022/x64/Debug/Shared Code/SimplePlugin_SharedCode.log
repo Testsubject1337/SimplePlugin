@@ -1,0 +1,10 @@
+﻿  PluginProcessor.cpp
+D:\Projekte\GITHUB\SimplePlugin\SimplePlugin\Source\PluginProcessor.cpp(80,57): warning C4100: "index": Unreferenzierter formaler Parameter
+D:\Projekte\GITHUB\SimplePlugin\SimplePlugin\Source\PluginProcessor.cpp(84,68): warning C4100: "index": Unreferenzierter formaler Parameter
+D:\Projekte\GITHUB\SimplePlugin\SimplePlugin\Source\PluginProcessor.cpp(89,84): warning C4100: "newName": Unreferenzierter formaler Parameter
+D:\Projekte\GITHUB\SimplePlugin\SimplePlugin\Source\PluginProcessor.cpp(89,57): warning C4100: "index": Unreferenzierter formaler Parameter
+D:\Projekte\GITHUB\SimplePlugin\SimplePlugin\Source\PluginProcessor.cpp(143,100): warning C4100: "midiMessages": Unreferenzierter formaler Parameter
+D:\Projekte\GITHUB\SimplePlugin\SimplePlugin\Source\PluginProcessor.cpp(187,74): warning C4100: "destData": Unreferenzierter formaler Parameter
+D:\Projekte\GITHUB\SimplePlugin\SimplePlugin\Source\PluginProcessor.cpp(194,77): warning C4100: "sizeInBytes": Unreferenzierter formaler Parameter
+D:\Projekte\GITHUB\SimplePlugin\SimplePlugin\Source\PluginProcessor.cpp(194,67): warning C4100: "data": Unreferenzierter formaler Parameter
+  SimplePlugin_SharedCode.vcxproj -> D:\Projekte\GITHUB\SimplePlugin\SimplePlugin\Builds\VisualStudio2022\x64\Debug\Shared Code\SimplePlugin.lib

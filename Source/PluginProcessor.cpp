@@ -93,6 +93,17 @@ void SimplePluginAudioProcessor::changeProgramName (int index, const juce::Strin
 //==============================================================================
 void SimplePluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
+    juce::dsp::ProcessSpec spec;
+
+    spec.maximumBlockSize = samplesPerBlock;
+
+    spec.numChannels = 1;
+
+    spec.sampleRate = sampleRate;
+
+    leftChain.prepare(spec);
+    rightChain.prepare(spec);
+
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
 }
@@ -144,18 +155,18 @@ void SimplePluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
+    juce::dsp::AudioBlock<float> block(buffer);
 
-        // ..do something to the data...
-    }
+    auto leftBlock = block.getSingleChannelBlock(0);
+    auto rightBlock = block.getSingleChannelBlock(1);
+
+    juce::dsp::ProcessContextReplacing<float> leftContext(leftBlock);
+    juce::dsp::ProcessContextReplacing<float> rightContext(rightBlock);
+
+    leftChain.process(leftContext);
+    rightChain.process(rightContext);
+    
+
 }
 
 //==============================================================================
@@ -191,27 +202,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout SimplePluginAudioProcessor::
     juce::AudioProcessorValueTreeState::ParameterLayout parameterLayout;
 
 
-    //****REVERB****
-    // Mix parameter
-    parameterLayout.add(std::make_unique<juce::AudioParameterFloat>(
-        "mix", "Mix", 0.0f, 1.0f, 0.5f));
-
-    // Room size parameter
-    parameterLayout.add(std::make_unique<juce::AudioParameterFloat>(
-        "roomSize", "Room Size", 0.0f, 1.0f, 0.5f));
-
-    // Damping parameter
-    parameterLayout.add(std::make_unique<juce::AudioParameterFloat>(
-        "damping", "Damping", 0.0f, 1.0f, 0.5f));
-
-    // Pre-delay parameter
-    parameterLayout.add(std::make_unique<juce::AudioParameterFloat>(
-        "preDelay", "Pre-Delay", 0.0f, 100.0f, 0.0f));
-
-    parameterLayout.add(std::make_unique<juce::AudioParameterFloat>(
-        "low", "Low", -24.0f, 24.0f, 0.0f));
-
-    //****SIMPLE EQ****
+    //===============SIMPLE EQ FOR INPUT===================
 
     //LowCut Frequency
     parameterLayout.add(std::make_unique<juce::AudioParameterFloat>("LowCut Freq",
@@ -236,7 +227,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout SimplePluginAudioProcessor::
         "Peak Gain",
         juce::NormalisableRange<float>(-24.f, 24.f, 0.5f, 1.f),
         0.0f));
-    
+
     //Peak Quality
     parameterLayout.add(std::make_unique<juce::AudioParameterFloat>("Peak Quality",
         "Peak Quality",
@@ -257,8 +248,31 @@ juce::AudioProcessorValueTreeState::ParameterLayout SimplePluginAudioProcessor::
     parameterLayout.add(std::make_unique<juce::AudioParameterChoice>("LowCut Slope", "LowCut Slope", stringArray, 0));
     parameterLayout.add(std::make_unique<juce::AudioParameterChoice>("HighCut Slope", "HighCut Slope", stringArray, 0));
 
-    //Bypasses
-    parameterLayout.add(std::make_unique<juce::AudioParameterBool>("EQ Bypassed", "EQ Bypassed", false));
+
+    //===================REVERB===================
+    // Mix parameter
+    parameterLayout.add(std::make_unique<juce::AudioParameterFloat>(
+        "mix", "Mix", 0.0f, 1.0f, 0.5f));
+
+    // Room size parameter
+    parameterLayout.add(std::make_unique<juce::AudioParameterFloat>(
+        "roomSize", "Room Size", 0.0f, 1.0f, 0.5f));
+
+    // Damping parameter
+    parameterLayout.add(std::make_unique<juce::AudioParameterFloat>(
+        "damping", "Damping", 0.0f, 1.0f, 0.5f));
+
+    // Pre-delay parameter
+    parameterLayout.add(std::make_unique<juce::AudioParameterFloat>(
+        "preDelay", "Pre-Delay", 0.0f, 100.0f, 0.0f));
+
+    parameterLayout.add(std::make_unique<juce::AudioParameterFloat>(
+        "low", "Low", -24.0f, 24.0f, 0.0f));
+
+
+
+    //===================BYPASS===================
+    parameterLayout.add(std::make_unique<juce::AudioParameterBool>("Input EQ Bypassed", "Input EQ Bypassed", false));
     parameterLayout.add(std::make_unique<juce::AudioParameterBool>("LowCut Bypassed", "LowCut Bypassed", false));
     parameterLayout.add(std::make_unique<juce::AudioParameterBool>("Peak Bypassed", "Peak Bypassed", false));
     parameterLayout.add(std::make_unique<juce::AudioParameterBool>("HighCut Bypassed", "HighCut Bypassed", false));
