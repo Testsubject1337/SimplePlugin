@@ -13,10 +13,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="D:\Projekte\GITHUB\ratemnachzahlem\JUCE\modules\juce_audio_plugin_client\juce_audio_plugin_client_VST3.cpp">
+    <ClCompile Include="..\..\..\..\ratemnachzahlem\JUCE\modules\juce_audio_plugin_client\juce_audio_plugin_client_VST3.cpp">
       <Filter>JUCE Modules\juce_audio_plugin_client</Filter>
     </ClCompile>
-    <ClCompile Include="D:\Projekte\GITHUB\ratemnachzahlem\JUCE\modules\juce_audio_plugin_client\juce_audio_plugin_client_VST3.mm">
+    <ClCompile Include="..\..\..\..\ratemnachzahlem\JUCE\modules\juce_audio_plugin_client\juce_audio_plugin_client_VST3.mm">
       <Filter>JUCE Modules\juce_audio_plugin_client</Filter>
     </ClCompile>
     <ClCompile Include="..\..\JuceLibraryCode\include_juce_audio_plugin_client_VST3.cpp">
