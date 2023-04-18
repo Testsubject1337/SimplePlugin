@@ -23,7 +23,7 @@ struct ChainSettings
     //EQ
     float peakFreq{ 0 }, peakGainInDecibels{ 0 }, peakQuality{ 1.f };
     float lowCutFreq{ 0 }, highCutFreq{ 0 };
-    int lowCutSlope{ Slope::Slope_12 }, highCutSlope{ Slope::Slope_12 };
+    Slope lowCutSlope{ Slope::Slope_12 }, highCutSlope{ Slope::Slope_12 };
 
     bool inputEqBypassed{ false };
     bool lowCutBypassed{ false };
@@ -104,6 +104,15 @@ private:
     // =================== DSP UNITS ===================
 
     //EQ
+    
+    enum ChainPositions
+    {
+        LowCut,
+        Peak,
+        HighCut,
+        Reverb
+    };
+    
     using Filter = juce::dsp::IIR::Filter<float>;
     using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter>;
     using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, CutFilter>;
@@ -114,7 +123,85 @@ private:
     
     static void updateCoefficients(Coefficients& old, const Coefficients& replacements);
 
+    template<int Index, typename ChainType, typename CoefficientType>
+    void update(ChainType& chain, const CoefficientType& coefficients)
+    {
+        updateCoefficients(chain.template get<Index>().coefficients, coefficients[Index]);
+        chain.template setBypassed<Index>(false);
+    }
 
+
+    template<typename ChainType, typename CoefficientType>
+    inline void updateCutFilter(ChainType& LowCut, const CoefficientType& cutCoefficients, const Slope& lowCutSlope)
+    {
+        LowCut.template setBypassed<0>(true);
+        LowCut.template setBypassed<1>(true);
+        LowCut.template setBypassed<2>(true);
+        LowCut.template setBypassed<3>(true);
+
+        switch (lowCutSlope)
+        {
+        case Slope_48:
+        {
+            update<3>(LowCut, cutCoefficients);
+        }
+
+        case Slope_36:
+        {
+            update<2>(LowCut, cutCoefficients);
+        }
+
+        case Slope_24:
+        {
+            update<1>(LowCut, cutCoefficients);
+        }
+
+        case Slope_12:
+        {
+            update<0>(LowCut, cutCoefficients);
+        }
+
+
+        /* case Slope_12:
+         {
+             *LowCut.get<0>().coefficients = *cutCoefficients[0];
+             LowCut.template setBypassed<0>(false);
+             break;
+         }
+         case Slope_24:
+         {
+             *LowCut.template get<0>().coefficients = *cutCoefficients[0];
+             LowCut.template setBypassed<0>(false);
+             *LowCut.template get<1>().coefficients = *cutCoefficients[0];
+             LowCut.template setBypassed<1>(false);
+             break;
+         }
+
+         case Slope_36:
+         {
+             *LowCut.template get<0>().coefficients = *cutCoefficients[0];
+             LowCut.template setBypassed<0>(false);
+             *LowCut.template get<1>().coefficients = *cutCoefficients[0];
+             LowCut.template setBypassed<1>(false);
+             *LowCut.template get<2>().coefficients = *cutCoefficients[0];
+             LowCut.template setBypassed<2>(false);
+             break;
+         }
+
+         case Slope_48:
+         {
+             *LowCut.template get<0>().coefficients = *cutCoefficients[0];
+             LowCut.template setBypassed<0>(false);
+             *LowCut.template get<1>().coefficients = *cutCoefficients[0];
+             LowCut.template setBypassed<1>(false);
+             *LowCut.template get<2>().coefficients = *cutCoefficients[0];
+             LowCut.template setBypassed<2>(false);
+             *LowCut.template get<3>().coefficients = *cutCoefficients[0];
+             LowCut.template setBypassed<3>(false);
+             break;
+         }*/
+        }
+    }
 
 
     // Reverb
@@ -123,15 +210,12 @@ private:
     void updateReverbParameters();
 
 
-    enum ChainPositions
-    {
-        LowCut,
-        Peak,
-        HighCut,
-        Reverb
-    };
+
+
 
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SimplePluginAudioProcessor)
 };
+
+
