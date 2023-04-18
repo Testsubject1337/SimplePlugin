@@ -94,18 +94,27 @@ void SimplePluginAudioProcessor::changeProgramName (int index, const juce::Strin
 void SimplePluginAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     juce::dsp::ProcessSpec spec;
-
     spec.maximumBlockSize = samplesPerBlock;
-
     spec.numChannels = 1;
-
     spec.sampleRate = sampleRate;
 
+    // Prepare Chain
     leftChain.prepare(spec);
     rightChain.prepare(spec);
 
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need..
+    // Prepare the Reverb effect
+    spec.numChannels = 2; // Assuming stereo input/output
+    reverb.prepare(spec);
+
+
+    auto chainSettings = getChainSettings(apvts);
+
+    auto peakCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, chainSettings.peakFreq, chainSettings.peakQuality, juce::Decibels::decibelsToGain(chainSettings.peakGainInDecibels));
+
+    *leftChain.get<ChainPositions::Peak>().coefficients = *peakCoefficients;
+    *rightChain.get<ChainPositions::Peak>().coefficients = *peakCoefficients;
+
+
 }
 
 void SimplePluginAudioProcessor::releaseResources()
@@ -154,6 +163,14 @@ void SimplePluginAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     // this code if your algorithm always overwrites all the output channels.
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
+
+    //Updates
+    auto chainSettings = getChainSettings(apvts);
+
+    auto peakCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(getSampleRate(), chainSettings.peakFreq, chainSettings.peakQuality, juce::Decibels::decibelsToGain(chainSettings.peakGainInDecibels));
+
+    *leftChain.get<ChainPositions::Peak>().coefficients = *peakCoefficients;
+    *rightChain.get<ChainPositions::Peak>().coefficients = *peakCoefficients;
 
     juce::dsp::AudioBlock<float> block(buffer);
 
@@ -252,22 +269,22 @@ juce::AudioProcessorValueTreeState::ParameterLayout SimplePluginAudioProcessor::
     //===================REVERB===================
     // Mix parameter
     parameterLayout.add(std::make_unique<juce::AudioParameterFloat>(
-        "mix", "Mix", 0.0f, 1.0f, 0.5f));
+        "Mix", "Mix", 0.0f, 1.0f, 0.5f));
 
     // Room size parameter
     parameterLayout.add(std::make_unique<juce::AudioParameterFloat>(
-        "roomSize", "Room Size", 0.0f, 1.0f, 0.5f));
+        "RoomSize", "Room Size", 0.0f, 1.0f, 0.5f));
 
     // Damping parameter
     parameterLayout.add(std::make_unique<juce::AudioParameterFloat>(
-        "damping", "Damping", 0.0f, 1.0f, 0.5f));
+        "Damping", "Damping", 0.0f, 1.0f, 0.5f));
 
     // Pre-delay parameter
     parameterLayout.add(std::make_unique<juce::AudioParameterFloat>(
-        "preDelay", "Pre-Delay", 0.0f, 100.0f, 0.0f));
+        "PreDelay", "Pre-Delay", 0.0f, 100.0f, 0.0f));
 
     parameterLayout.add(std::make_unique<juce::AudioParameterFloat>(
-        "low", "Low", -24.0f, 24.0f, 0.0f));
+        "Low", "Low", -24.0f, 24.0f, 0.0f));
 
 
 
@@ -281,9 +298,44 @@ juce::AudioProcessorValueTreeState::ParameterLayout SimplePluginAudioProcessor::
     return parameterLayout;
 }
 
+ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts)
+{
+    ChainSettings settings;
+    settings.lowCutFreq = apvts.getRawParameterValue("LowCut Freq")->load();
+    settings.highCutFreq = apvts.getRawParameterValue("HighCut Freq")->load();
+    settings.peakFreq = apvts.getRawParameterValue("Peak Freq")->load();
+    settings.peakGainInDecibels = apvts.getRawParameterValue("Peak Gain")->load();
+    settings.peakQuality = apvts.getRawParameterValue("Peak Quality")->load();
+    settings.highCutSlope = apvts.getRawParameterValue("HighCut Slope")->load();
+    settings.lowCutSlope = apvts.getRawParameterValue("LowCut Slope")->load();
+    settings.roomSize = apvts.getRawParameterValue("RoomSize")->load();
+    settings.damping = apvts.getRawParameterValue("Damping")->load();
+    settings.preDelay = apvts.getRawParameterValue("PreDelay")->load();
+    settings.low = apvts.getRawParameterValue("Low")->load();
+    settings.mix = apvts.getRawParameterValue("Mix")->load();
+
+    return settings;
+}
+
+
+
+void SimplePluginAudioProcessor::updateReverbParameters()
+{
+    juce::dsp::Reverb::Parameters params;
+    params.roomSize = *apvts.getRawParameterValue("roomSize");
+    params.damping = *apvts.getRawParameterValue("damping");
+    params.wetLevel = *apvts.getRawParameterValue("wetLevel");
+    params.dryLevel = *apvts.getRawParameterValue("dryLevel");
+    params.width = 1.0f; // You can adjust the width parameter as needed
+    params.freezeMode = 0.0f; // You can set this to 1.0f to enable freeze mode
+
+    reverb.setParameters(params);
+}
+
 //==============================================================================
 // This creates new instances of the plugin..
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new SimplePluginAudioProcessor();
 }
+

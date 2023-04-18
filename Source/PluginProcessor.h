@@ -10,6 +10,34 @@
 
 #include <JuceHeader.h>
 
+struct ChainSettings
+{
+    //EQ
+    float peakFreq{ 0 }, peakGainInDecibels{ 0 }, peakQuality{ 1.f };
+    float lowCutFreq{ 0 }, highCutFreq{ 0 };
+    int lowCutSlope{ 0 }, highCutSlope{ 0 };
+
+    bool inputEqBypassed{ false };
+    bool lowCutBypassed{ false };
+    bool peakBypassed{ false };
+    bool HighCutBypassed{ false };
+
+    //Reverb
+    float mix{ 1.f };
+    float roomSize{ 0.5f };
+    float damping{ 0.5f };
+    float preDelay{ 1.f };
+    float low{ 0 };
+
+    bool AnalyzerEnabled { true };
+    
+
+};
+
+
+
+ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts);
+
 //==============================================================================
 /**
 */
@@ -60,6 +88,9 @@ public:
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     juce::AudioProcessorValueTreeState apvts {*this, nullptr, "Paramaters", createParameterLayout() };
 
+    
+
+
 private:
 
     // =================== DSP UNITS ===================
@@ -71,6 +102,20 @@ private:
     using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, CutFilter>;
 
     MonoChain leftChain, rightChain;
+
+    // Reverb
+    juce::dsp::Reverb reverb;
+    void updateReverbParameters();
+
+
+    enum ChainPositions
+    {
+        LowCut,
+        Peak,
+        HighCut,
+        Reverb
+    };
+
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SimplePluginAudioProcessor)
