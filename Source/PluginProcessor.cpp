@@ -332,17 +332,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout SimplePluginAudioProcessor::
     parameterLayout.add(std::make_unique<juce::AudioParameterFloat>(
         "Damping", "Damping", 0.0f, 1.0f, 0.5f));
 
-
-
-
-
-    //===================BYPASS===================
-    parameterLayout.add(std::make_unique<juce::AudioParameterBool>("Input EQ Bypassed", "Input EQ Bypassed", false));
-    parameterLayout.add(std::make_unique<juce::AudioParameterBool>("LowCut Bypassed", "LowCut Bypassed", false));
-    parameterLayout.add(std::make_unique<juce::AudioParameterBool>("Peak Bypassed", "Peak Bypassed", false));
-    parameterLayout.add(std::make_unique<juce::AudioParameterBool>("HighCut Bypassed", "HighCut Bypassed", false));
-    parameterLayout.add(std::make_unique<juce::AudioParameterBool>("Analyzer Enabled", "Analyzer Enabled", true));
-
     return parameterLayout;
 }
 
